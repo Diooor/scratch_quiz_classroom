@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scratch 運算積木挑戰</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans TC', "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 10% 0%, #FFE8C7 0%, transparent 40%),
+      radial-gradient(circle at 90% 100%, #C7E8FF 0%, transparent 40%),
+      #FFF9EC;
+    min-height: 100vh; color: #1F2937; line-height: 1.6;
+  }
+  #app { min-height: 100vh; }
+
+  .blk { display: inline-flex; align-items: center; color: #FFFFFF; font-weight: 500; font-size: 14px; padding: 4px 10px; border-radius: 999px; margin: 2px; box-shadow: 0 1px 0 rgba(0,0,0,0.15); line-height: 1.5; vertical-align: middle; }
+  .blk-op { background: #59C059; border: 1.5px solid #389438; }
+  .blk-var { background: #FF8C1A; border: 1.5px solid #DB6E00; font-weight: 700; font-size: 12px; padding: 3px 8px; }
+  .blk-sense { background: #5CB1D6; border: 1.5px solid #2E8EB8; font-weight: 700; font-size: 12px; padding: 3px 8px; }
+  .blk-bool { background: #59C059; color: #FFFFFF; font-weight: 500; font-size: 14px; padding: 4px 14px; margin: 2px; display: inline-flex; align-items: center; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); filter: drop-shadow(0 1px 0 #389438); line-height: 1.5; vertical-align: middle; }
+  .blk-input { display: inline-block; background: #FFFFFF; color: #1F2937; font-weight: 700; font-size: 12px; padding: 1px 7px; border-radius: 999px; margin: 0 3px; border: 1px solid rgba(0,0,0,0.15); min-width: 18px; text-align: center; line-height: 1.4; }
+  .hl { background: #FEF08A; padding: 0 4px; font-weight: 700; border-radius: 4px; }
+
+  .card { background: #FFFFFF; border: 3px solid #1F2937; border-radius: 24px; padding: 28px; }
+  .card-shadow { box-shadow: 8px 8px 0 #1F2937; }
+  .center-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .start-card { max-width: 480px; width: 100%; }
+
+  .btn { border: 2px solid #1F2937; border-radius: 12px; padding: 12px 20px; font-weight: 700; font-size: 16px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: transform 0.1s; font-family: inherit; }
+  .btn:active { transform: translate(2px, 2px); }
+  .btn-primary { background: #F97316; color: #FFFFFF; box-shadow: 4px 4px 0 #1F2937; }
+  .btn-primary:disabled { background: #9CA3AF; box-shadow: none; cursor: not-allowed; }
+  .btn-secondary { background: #FFFFFF; color: #1F2937; box-shadow: 4px 4px 0 #1F2937; }
+  .btn-success { background: #16A34A; color: #FFFFFF; box-shadow: 4px 4px 0 #1F2937; }
+  .btn-danger { background: #DC2626; color: #FFFFFF; box-shadow: 4px 4px 0 #1F2937; }
+  .btn-ghost { background: transparent; border: none; box-shadow: none; color: #6B7280; padding: 8px 12px; font-size: 14px; }
+
+  .music-btn { background: #FFFFFF; border: 2px solid #1F2937; border-radius: 999px; width: 38px; height: 38px; font-size: 18px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0 #1F2937; flex-shrink: 0; transition: transform 0.1s; padding: 0; }
+  .music-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1F2937; }
+  .music-btn.muted { background: #FEE2E2; }
+  .music-btn.playing { background: #FFE066; }
+  .music-pulse { animation: musicPulse 0.5s ease-in-out infinite alternate; }
+  @keyframes musicPulse { from { box-shadow: 2px 2px 0 #1F2937; } to { box-shadow: 2px 2px 0 #F97316, 0 0 12px rgba(249,115,22,0.6); } }
+
+  .timer { display: inline-flex; align-items: center; gap: 4px; background: #FFFFFF; border: 2px solid #1F2937; border-radius: 999px; padding: 4px 12px; font-family: 'Courier New', monospace; font-weight: 900; font-size: 16px; min-width: 64px; justify-content: center; box-shadow: 2px 2px 0 #1F2937; }
+  .timer.warning { background: #FEF3C7; color: #92400E; }
+  .timer.urgent { background: #FEE2E2; color: #DC2626; animation: timerPulse 0.4s ease-in-out infinite alternate; border-color: #DC2626; box-shadow: 2px 2px 0 #DC2626; }
+  @keyframes timerPulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+
+  .streak { display: inline-flex; align-items: center; gap: 4px; background: #FB923C; color: #FFFFFF; border: 2px solid #C2410C; border-radius: 999px; padding: 3px 10px; font-weight: 900; font-size: 13px; box-shadow: 2px 2px 0 #1F2937; animation: streakBounce 0.6s ease-out; }
+  @keyframes streakBounce { 0% { transform: scale(0.5); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+  .cat-emoji { font-size: 56px; text-align: center; margin-bottom: 12px; animation: bounce 2.4s infinite; }
+  @keyframes bounce { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-8px);} }
+  .title { font-size: 30px; font-weight: 900; text-align: center; margin-bottom: 12px; }
+  .subtitle-tag { display: inline-block; background: #FFE066; border: 2px solid #1F2937; padding: 4px 14px; font-weight: 900; font-size: 16px; border-radius: 6px; }
+  .subtitle-row { text-align: center; margin-bottom: 12px; }
+  .subtitle-text { text-align: center; color: #6B7280; font-style: italic; font-size: 14px; }
+
+  .role-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .role-card { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 3px solid #1F2937; border-radius: 16px; cursor: pointer; font-family: inherit; width: 100%; text-align: left; box-shadow: 4px 4px 0 #1F2937; transition: transform 0.1s; }
+  .role-card:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1F2937; }
+  .role-card.teacher { background: #FEF3C7; }
+  .role-card.teacher:hover { background: #FDE68A; }
+  .role-card.student { background: #DBEAFE; }
+  .role-card.student:hover { background: #BFDBFE; }
+  .role-icon { font-size: 44px; flex-shrink: 0; line-height: 1; }
+  .role-info { flex: 1; }
+  .role-title { font-size: 20px; font-weight: 900; margin-bottom: 2px; }
+  .role-desc { font-size: 13px; color: #6B7280; }
+
+  .form-label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 14px; color: #374151; }
+  .form-input { width: 100%; padding: 12px 16px; border: 2px solid #1F2937; border-radius: 12px; font-size: 18px; background: #FFF7ED; outline: none; font-family: inherit; }
+  .form-input:focus { background: #FFFFFF; }
+  .form-input.id-input { font-family: 'Courier New', monospace; font-weight: 900; letter-spacing: 4px; text-align: center; text-transform: uppercase; }
+  .or-divider { text-align: center; color: #9CA3AF; font-size: 13px; margin: 18px 0; }
+
+  .quiz-id-display { font-family: 'Courier New', 'Consolas', monospace; font-size: 38px; font-weight: 900; letter-spacing: 6px; background: #FFFFFF; border: 3px solid #1F2937; padding: 10px 24px; border-radius: 12px; display: inline-block; box-shadow: 4px 4px 0 #1F2937; }
+  .quiz-id-badge { font-family: 'Courier New', monospace; font-weight: 900; background: #FFE066; border: 2px solid #1F2937; padding: 3px 10px; border-radius: 6px; font-size: 14px; letter-spacing: 2px; }
+  .id-hero { padding: 24px; text-align: center; background: #FFF7ED; margin-bottom: 20px; }
+  .id-hero-label { font-size: 13px; color: #6B7280; margin-bottom: 10px; font-weight: 700; }
+  .id-hero-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .id-hero-tip { font-size: 12px; color: #9CA3AF; margin-top: 12px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-box { background: #FFFFFF; border: 2px solid #1F2937; border-radius: 12px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 30px; font-weight: 900; color: #F97316; line-height: 1; }
+  .stat-label { font-size: 12px; color: #6B7280; margin-top: 4px; }
+
+  .my-quiz-list { display: flex; flex-direction: column; gap: 8px; }
+  .my-quiz-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #F9FAFB; border: 2px solid #E5E7EB; border-radius: 8px; cursor: pointer; font-family: inherit; width: 100%; text-align: left; transition: all 0.1s; }
+  .my-quiz-item:hover { background: #FEF3C7; border-color: #F97316; }
+
+  .legend { margin-top: 24px; padding-top: 18px; border-top: 2px dashed #D1D5DB; }
+  .legend-title { font-size: 12px; color: #6B7280; text-align: center; font-weight: 700; margin-bottom: 8px; }
+  .legend-blocks { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+  .error-msg { margin-top: 12px; padding: 10px 14px; background: #FEF2F2; border-left: 4px solid #DC2626; border-radius: 6px; color: #991B1B; font-size: 14px; }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1F2937; color: #FFE066; padding: 12px 24px; border-radius: 999px; font-weight: 700; z-index: 1000; animation: toastIn 0.3s ease-out; box-shadow: 4px 4px 0 #F97316; }
+  @keyframes toastIn { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+  .quiz-container { max-width: 760px; margin: 0 auto; padding: 20px; }
+  .quiz-topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 14px; flex-wrap: wrap; gap: 8px; }
+  .quiz-topbar .name { font-weight: 900; }
+  .quiz-topbar .right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .progress-dots { display: flex; gap: 4px; margin-bottom: 20px; }
+  .dot { flex: 1; height: 8px; border-radius: 999px; background: #E5E7EB; cursor: pointer; border: none; padding: 0; }
+  .dot.current { background: #F97316; }
+  .dot.committed { background: #59C059; }
+  .topic-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .topic-tag { background: #FFE066; border: 2px solid #1F2937; padding: 2px 12px; font-weight: 900; font-size: 14px; border-radius: 4px; }
+  .q-title { font-size: 22px; font-weight: 900; }
+  .scenario { font-size: 16px; line-height: 1.7; margin-bottom: 24px; color: #374151; }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; background: #FAFAF7; border: 2px solid #E5E7EB; border-radius: 12px; cursor: pointer; transition: all 0.1s; text-align: left; font-family: inherit; width: 100%; }
+  .option:hover:not(.locked) { border-color: #FFAB19; background: #FFFBEB; }
+  .option.selected { background: #FEF3C7; border: 3px solid #F97316; box-shadow: 3px 3px 0 #F97316; }
+  .option.locked { cursor: not-allowed; opacity: 0.55; }
+  .option.locked.selected { opacity: 1; }
+  .opt-letter { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; border: 2px solid #1F2937; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; margin-top: 2px; }
+  .option.selected .opt-letter { background: #F97316; color: #FFFFFF; }
+  .opt-content { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-top: 4px; }
+  .hint { margin-top: 18px; padding: 10px 14px; background: #FFFBEB; border-left: 4px solid #FFAB19; border-radius: 6px; font-size: 14px; color: #78350F; font-style: italic; }
+  .nav-buttons { display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; }
+
+  .lock-banner { margin-bottom: 14px; padding: 8px 14px; background: #ECFDF5; border: 2px solid #6EE7B7; border-radius: 10px; font-size: 13px; color: #065F46; text-align: center; font-weight: 700; }
+
+  .results-container { max-width: 760px; margin: 0 auto; padding: 20px; }
+  .hero { text-align: center; padding: 32px; }
+  .hero-emoji { font-size: 72px; margin-bottom: 12px; }
+  .hero-msg { font-size: 18px; color: #6B7280; margin-bottom: 8px; }
+  .hero-msg .name-strong { font-weight: 900; color: #1F2937; }
+  .score-display { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin: 12px 0; }
+  .score-num { font-size: 80px; font-weight: 900; color: #F97316; line-height: 1; }
+  .score-total { font-size: 32px; font-weight: 700; color: #9CA3AF; }
+  .medal { display: inline-block; background: #FFE066; border: 2px solid #1F2937; padding: 8px 20px; border-radius: 999px; font-weight: 900; font-size: 18px; }
+  .meta-info { margin-top: 14px; font-size: 13px; color: #9CA3AF; }
+  .breakdown { margin-top: 20px; padding: 24px; }
+  .breakdown h2 { font-size: 22px; font-weight: 900; margin-bottom: 16px; }
+  .review-item { padding: 14px; border-radius: 12px; margin-bottom: 10px; display: flex; gap: 12px; }
+  .review-item.correct { background: #F0FDF4; border: 2px solid #86EFAC; }
+  .review-item.wrong { background: #FEF2F2; border: 2px solid #FCA5A5; }
+  .check-circle { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; color: #FFFFFF; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .check-circle.ok { background: #22C55E; }
+  .check-circle.no { background: #EF4444; }
+  .review-body { flex: 1; min-width: 0; }
+  .review-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .review-head strong { font-weight: 900; }
+  .small-tag { background: #FFE066; padding: 2px 8px; font-size: 12px; font-weight: 700; border-radius: 4px; }
+  .your-ans { font-size: 14px; margin-bottom: 6px; }
+  .your-ans .ok-text { color: #15803D; font-weight: 700; }
+  .your-ans .no-text { color: #DC2626; font-weight: 700; text-decoration: line-through; }
+  .your-ans .correct-text { color: #15803D; font-weight: 700; }
+  .explanation { font-size: 12px; color: #6B7280; font-style: italic; line-height: 1.6; }
+  .results-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  @media (min-width: 640px) { .results-actions { flex-direction: row; } .results-actions .btn { flex: 1; } }
+
+  .perfect-glow { box-shadow: 0 0 0 3px #FFE066, 0 0 30px rgba(255,224,102,0.6), 8px 8px 0 #F97316 !important; animation: perfectGlow 1.5s ease-in-out infinite alternate; }
+  @keyframes perfectGlow { from { box-shadow: 0 0 0 3px #FFE066, 0 0 20px rgba(255,224,102,0.5), 8px 8px 0 #F97316; } to { box-shadow: 0 0 0 4px #F97316, 0 0 40px rgba(249,115,22,0.7), 8px 8px 0 #F97316; } }
+
+  .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 999; }
+  .confetti-piece { position: absolute; top: -20px; width: 10px; height: 14px; animation: confettiFall linear forwards; }
+  @keyframes confettiFall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0.7; } }
+
+  .dashboard-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+  .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .dashboard-header h1 { font-size: 22px; font-weight: 900; }
+  .empty { text-align: center; padding: 50px 20px; }
+  .empty-emoji { font-size: 56px; margin-bottom: 12px; }
+  .records-table-wrap { overflow-x: auto; }
+  table.records { width: 100%; border-collapse: collapse; }
+  table.records thead { background: #FFE066; border-bottom: 3px solid #1F2937; }
+  table.records th { padding: 12px; text-align: left; font-weight: 900; font-size: 14px; white-space: nowrap; }
+  table.records th.center { text-align: center; }
+  table.records td { padding: 12px; border-bottom: 1px solid #E5E7EB; font-size: 14px; }
+  table.records td.center { text-align: center; }
+  table.records tbody tr:hover { background: #FFFBEB; }
+  .pct-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; color: #FFFFFF; font-weight: 700; font-size: 13px; }
+  .records-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  @media (min-width: 640px) { .records-actions { flex-direction: row; } .records-actions .grow { flex: 1; } }
+
+  /* ── Live indicator ───────────────────── */
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #DC2626; color: #FFFFFF;
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 900;
+    border: 2px solid #1F2937;
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #FFFFFF;
+    animation: livePulse 1.4s ease-in-out infinite;
+  }
+  @keyframes livePulse { 0%,100%{ opacity: 1; } 50%{ opacity: 0.3; } }
+
+  /* ── Setup Banner (when Firebase not configured) ───── */
+  .setup-banner {
+    background: #FEF3C7; border: 3px solid #F59E0B;
+    border-radius: 16px; padding: 16px 20px;
+    margin-bottom: 20px; max-width: 760px;
+    margin-left: auto; margin-right: auto;
+  }
+  .setup-banner-title { font-weight: 900; font-size: 15px; color: #78350F; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .setup-banner-text { font-size: 13px; color: #92400E; line-height: 1.6; }
+  .setup-banner code { background: #FEF08A; padding: 1px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; }
+
+  /* ── Connection status ──────────── */
+  .conn-status {
+    position: fixed; top: 12px; right: 12px;
+    background: #FFFFFF; border: 2px solid #1F2937;
+    border-radius: 999px; padding: 4px 12px;
+    font-size: 11px; font-weight: 700;
+    box-shadow: 2px 2px 0 #1F2937;
+    z-index: 100;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .conn-status.online { background: #DCFCE7; }
+  .conn-status.offline { background: #FEE2E2; }
+  .conn-status.connecting { background: #FEF3C7; }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .conn-status.online .conn-dot { background: #16A34A; }
+  .conn-status.offline .conn-dot { background: #DC2626; }
+  .conn-status.connecting .conn-dot { background: #F59E0B; animation: livePulse 1s infinite; }
+
+  .footer-note { text-align: center; color: #9CA3AF; font-size: 11px; font-style: italic; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     🔥 FIREBASE CONFIG
+     ═══════════════════════════════════════════════════════════
+     設定步驟：
+     1. 去 https://console.firebase.google.com/ 用 Google 帳號登入
+     2. 點「建立專案」(Add project) → 取個名字 (例如 scratch-quiz) → 一直下一步
+     3. 進入專案後，點左上「⚙️ 專案設定」(Project settings)
+     4. 滾到下面「您的應用程式」→ 點「</>」(Web) 圖示
+     5. 取個 App 名字 → 註冊應用程式 → 複製出現的 firebaseConfig 內容
+     6. 把下面的 firebaseConfig 整段取代成你複製的那一段
+     7. 回到 Firebase Console → 左側選單「Build」→「Firestore Database」
+     8. 點「建立資料庫」→ 選「以測試模式啟動」→ 選擇「asia-east1」(台灣) → 啟用
+     9. 完成！打開這個 HTML 就能跨裝置同步了 🎉
+     ═══════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js';
+  import {
+    getFirestore, collection, doc, setDoc, getDoc, getDocs,
+    deleteDoc, addDoc, query, orderBy, onSnapshot, serverTimestamp
+  } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+
+  // ⚠️ 把下面這段換成你自己的 Firebase 設定 ⚠️
+  const firebaseConfig = {
+  apiKey: "AIzaSyATep4CpG6V2VfYbJ6qvseP8LSAfR3BgE0",
+  authDomain: "scratch-quiz-cb707.firebaseapp.com",
+  projectId: "scratch-quiz-cb707",
+  storageBucket: "scratch-quiz-cb707.firebasestorage.app",
+  messagingSenderId: "17464371002",
+  appId: "1:17464371002:web:6dca8978f6fdd4cc6d5203"
+};
+
+
+  // 檢查是否設定完成
+  const isConfigured = !firebaseConfig.apiKey.startsWith('PASTE_');
+
+  let db = null;
+  if (isConfigured) {
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      window.__fbStatus = 'online';
+    } catch (e) {
+      console.error('Firebase init failed:', e);
+      window.__fbStatus = 'offline';
+    }
+  } else {
+    window.__fbStatus = 'unconfigured';
+  }
+
+  // ═══════════════ 讓 window 可呼叫的 Firestore API ═══════════════
+  window.fbAPI = {
+    isConfigured,
+
+    // ── Quiz CRUD ──
+    async createQuiz(quizId) {
+      if (!db) throw new Error('Firebase not configured');
+      await setDoc(doc(db, 'quizzes', quizId), {
+        id: quizId,
+        createdAt: new Date().toISOString(),
+      });
+    },
+
+    async getQuiz(quizId) {
+      if (!db) return null;
+      const snap = await getDoc(doc(db, 'quizzes', quizId));
+      return snap.exists() ? snap.data() : null;
+    },
+
+    async deleteQuiz(quizId) {
+      if (!db) throw new Error('Firebase not configured');
+      // delete all records under it first
+      const recordsSnap = await getDocs(collection(db, 'quizzes', quizId, 'records'));
+      await Promise.all(recordsSnap.docs.map(d => deleteDoc(d.ref)));
+      await deleteDoc(doc(db, 'quizzes', quizId));
+    },
+
+    // ── Records ──
+    async submitRecord(quizId, record) {
+      if (!db) throw new Error('Firebase not configured');
+      await addDoc(collection(db, 'quizzes', quizId, 'records'), {
+        ...record,
+        createdAt: serverTimestamp(),
+      });
+    },
+
+    // Real-time listener for a quiz's records
+    listenToRecords(quizId, callback) {
+      if (!db) return () => {};
+      const q = query(collection(db, 'quizzes', quizId, 'records'), orderBy('id', 'desc'));
+      return onSnapshot(q, (snap) => {
+        const records = snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
+        callback(records);
+      }, (err) => {
+        console.error('Listener error:', err);
+      });
+    },
+  };
+
+  // 通知 main script Firebase 已準備好
+  window.dispatchEvent(new CustomEvent('firebase-ready'));
+</script>
+
+<div id="app"></div>
+<div id="toast-container"></div>
+<div id="conn-status-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  CONNECTION STATUS UI
+// ════════════════════════════════════════════════════
+function renderConnStatus() {
+  const c = document.getElementById('conn-status-container');
+  const status = window.__fbStatus;
+  if (status === 'unconfigured') {
+    c.innerHTML = `<div class="conn-status offline"><span class="conn-dot"></span>未設定 Firebase</div>`;
+  } else if (status === 'online') {
+    c.innerHTML = `<div class="conn-status online"><span class="conn-dot"></span>雲端已連線</div>`;
+  } else {
+    c.innerHTML = `<div class="conn-status offline"><span class="conn-dot"></span>連線失敗</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  LOCAL STORAGE FALLBACK (for "我建立的測驗" list only)
+// ════════════════════════════════════════════════════
+function getMyQuizIds() {
+  try { return JSON.parse(localStorage.getItem('my_quiz_ids') || '[]'); }
+  catch { return []; }
+}
+function saveMyQuizIds(ids) {
+  try { localStorage.setItem('my_quiz_ids', JSON.stringify(ids)); } catch {}
+}
+function addMyQuizId(id) {
+  const ids = getMyQuizIds();
+  if (!ids.includes(id)) { ids.unshift(id); saveMyQuizIds(ids); }
+}
+function removeMyQuizId(id) {
+  saveMyQuizIds(getMyQuizIds().filter(x => x !== id));
+}
+
+// ════════════════════════════════════════════════════
+//  🎵 MUSIC + SFX (same as before)
+// ════════════════════════════════════════════════════
+const BASE_BPM = 132, MAX_BPM = 180, BPM_PER_STREAK = 6, URGENT_MULT = 1.4;
+const music = { inited: false, playing: false, muted: false, master: null, bass: null, lead: null };
+
+async function setupMusic() {
+  if (music.inited) return;
+  await Tone.start();
+  Tone.Transport.bpm.value = BASE_BPM;
+  music.master = new Tone.Volume(-12).toDestination();
+
+  const bass = new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' },
+    envelope:   { attack: 0.005, decay: 0.12, sustain: 0.35, release: 0.06 },
+    filter:     { Q: 6, type: 'lowpass' },
+    filterEnvelope: { attack: 0.001, decay: 0.18, sustain: 0.15, release: 0.2, baseFrequency: 90, octaves: 3.4 },
+  }).connect(music.master);
+  bass.volume.value = -8;
+  music.bass = bass;
+
+  const lead = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.005, decay: 0.06, sustain: 0.2, release: 0.1 } }).connect(music.master);
+  lead.volume.value = -22;
+  music.lead = lead;
+
+  const hat = new Tone.MetalSynth({ frequency: 250, envelope: { attack: 0.001, decay: 0.04, release: 0.005 }, harmonicity: 5, modulationIndex: 30, resonance: 5000, octaves: 1 }).connect(music.master);
+  hat.volume.value = -32;
+
+  const kick = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 5, envelope: { attack: 0.001, decay: 0.25, sustain: 0, release: 0.5 } }).connect(music.master);
+  kick.volume.value = -4;
+
+  const snare = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.05 } }).connect(music.master);
+  snare.volume.value = -16;
+
+  const bassPat = ['A2', null, null, null, null, null, 'A2', null, 'E2', null, null, null, 'F2', null, 'G2', null];
+  const leadPat = ['A4', null, null, 'C5', null, 'E5', null, 'D5', null, 'C5', null, 'B4', 'A4', null, null, null,
+                   'A4', null, null, 'C5', null, 'E5', 'A5', null, null, 'G5', null, 'E5', 'D5', null, null, null];
+  const kickPat  = [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,1,0];
+  const snarePat = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0];
+  const hatPat   = [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,1];
+  let step = 0;
+
+  Tone.Transport.scheduleRepeat((time) => {
+    const i16 = step % 16, i32 = step % 32;
+    if (kickPat[i16])  kick.triggerAttackRelease('C1', '16n', time);
+    if (snarePat[i16]) snare.triggerAttackRelease('16n', time);
+    if (hatPat[i16])   hat.triggerAttackRelease('32n', time, 0.4);
+    const bn = bassPat[i16]; if (bn) bass.triggerAttackRelease(bn, '8n', time);
+    const ln = leadPat[i32]; if (ln) lead.triggerAttackRelease(ln, '16n', time);
+    step++;
+  }, '16n');
+  music.inited = true;
+}
+
+async function startMusic() {
+  if (music.muted) return;
+  if (!music.inited) { try { await setupMusic(); } catch (e) { return; } }
+  if (Tone.Transport.state !== 'started') Tone.Transport.start();
+  music.playing = true; setBPM(false); refreshMuteBtn();
+}
+function stopMusic() {
+  if (!music.inited) return;
+  if (Tone.Transport.state === 'started') Tone.Transport.stop();
+  music.playing = false; refreshMuteBtn();
+}
+async function toggleMute() {
+  music.muted = !music.muted;
+  try { localStorage.setItem('music_muted', music.muted ? '1' : '0'); } catch {}
+  if (music.muted) { if (music.master) music.master.mute = true; stopMusic(); }
+  else { if (music.master) music.master.mute = false; if (state.screen === 'quiz') await startMusic(); }
+  refreshMuteBtn();
+}
+function refreshMuteBtn() {
+  const btn = byId('muteBtn'); if (!btn) return;
+  if (music.muted) { btn.textContent = '🔇'; btn.classList.add('muted'); btn.classList.remove('playing','music-pulse'); }
+  else if (music.playing) { btn.textContent = '🔊'; btn.classList.add('playing','music-pulse'); btn.classList.remove('muted'); }
+  else { btn.textContent = '🔊'; btn.classList.remove('muted','playing','music-pulse'); }
+}
+function getNormalBPM() { return Math.min(MAX_BPM, BASE_BPM + state.streak * BPM_PER_STREAK); }
+function setBPM(urgent) {
+  if (!music.inited) return;
+  const target = urgent ? Math.min(220, getNormalBPM() * URGENT_MULT) : getNormalBPM();
+  Tone.Transport.bpm.rampTo(target, 0.4);
+}
+function playCorrectChime() {
+  if (music.muted || !music.inited) return;
+  const chime = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.3, sustain: 0, release: 0.2 } }).connect(music.master);
+  chime.volume.value = -6;
+  const t = Tone.now();
+  chime.triggerAttackRelease('E6', '16n', t);
+  chime.triggerAttackRelease('A6', '8n', t + 0.08);
+  setTimeout(() => chime.dispose(), 1500);
+}
+function playWrongStab() {
+  if (music.muted || !music.inited) return;
+  const wrong = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.005, decay: 0.5, sustain: 0, release: 0.1 } }).connect(music.master);
+  wrong.volume.value = -6;
+  const t = Tone.now();
+  wrong.triggerAttack('A3', t);
+  wrong.frequency.exponentialRampTo('A1', 0.5, t);
+  wrong.triggerRelease(t + 0.5);
+  if (music.bass) {
+    music.bass.detune.value = -80;
+    setTimeout(() => { if (music.bass) music.bass.detune.value = 0; }, 1200);
+  }
+  setTimeout(() => wrong.dispose(), 1500);
+}
+async function playVictoryFanfare() {
+  if (music.muted) return;
+  if (!music.inited) { try { await setupMusic(); } catch (e) { return; } }
+  if (music.master) music.master.mute = false;
+  const t = Tone.now() + 0.05;
+  const brass = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fatsawtooth', count: 3, spread: 30 }, envelope: { attack: 0.02, decay: 0.1, sustain: 0.7, release: 0.4 } }).connect(music.master);
+  brass.volume.value = -8;
+  brass.triggerAttackRelease(['C4','E4','G4'], '8n', t);
+  brass.triggerAttackRelease(['C4','E4','G4'], '8n', t + 0.22);
+  brass.triggerAttackRelease(['G3','B3','D4','G4'], '8n', t + 0.44);
+  brass.triggerAttackRelease(['C4','E4','G4','C5'], '2n', t + 0.75);
+  const lead2 = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.005, decay: 0.05, sustain: 0.5, release: 0.2 } }).connect(music.master);
+  lead2.volume.value = -4;
+  lead2.triggerAttackRelease('G4', '16n', t);
+  lead2.triggerAttackRelease('C5', '16n', t + 0.11);
+  lead2.triggerAttackRelease('E5', '16n', t + 0.22);
+  lead2.triggerAttackRelease('G5', '8n', t + 0.33);
+  lead2.triggerAttackRelease('E5', '16n', t + 0.55);
+  lead2.triggerAttackRelease('G5', '16n', t + 0.66);
+  lead2.triggerAttackRelease('C6', '2n', t + 0.77);
+  const crash = new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.001, decay: 1.5, release: 0.8 }, harmonicity: 5.1, modulationIndex: 64, resonance: 8000, octaves: 2 }).connect(music.master);
+  crash.volume.value = -14;
+  crash.triggerAttackRelease('1n', t + 0.77);
+  const kk = new Tone.MembraneSynth({ pitchDecay: 0.1, octaves: 6, envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.5 } }).connect(music.master);
+  kk.volume.value = -2;
+  kk.triggerAttackRelease('C1', '8n', t);
+  kk.triggerAttackRelease('C1', '8n', t + 0.77);
+  setTimeout(() => { brass.dispose(); lead2.dispose(); crash.dispose(); kk.dispose(); }, 4500);
+}
+
+// ════════════════════════════════════════════════════
+//  TIMER
+// ════════════════════════════════════════════════════
+const QUESTION_TIME = 30, URGENT_THRESHOLD = 5;
+let timerInterval = null;
+function ensureQuestionTimer() {
+  if (state.committed[state.currentQ]) { clearQuestionTimer(); state.timeRemaining = 0; return; }
+  if (state.activeTimerForQ === state.currentQ) return;
+  state.activeTimerForQ = state.currentQ;
+  state.timeRemaining = QUESTION_TIME;
+  state.questionStartTime = Date.now();
+  state.urgentMode = false; setBPM(false);
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(tick, 200);
+}
+function clearQuestionTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  state.activeTimerForQ = -1; state.urgentMode = false;
+}
+function tick() {
+  const elapsed = (Date.now() - state.questionStartTime) / 1000;
+  state.timeRemaining = Math.max(0, QUESTION_TIME - elapsed);
+  if (state.timeRemaining <= URGENT_THRESHOLD && !state.urgentMode) {
+    state.urgentMode = true; setBPM(true);
+  }
+  if (state.timeRemaining <= 0) { clearQuestionTimer(); handleTimerExpired(); return; }
+  updateTimerDOM();
+}
+function updateTimerDOM() {
+  const el = byId('timer'); if (!el) return;
+  const sec = Math.ceil(state.timeRemaining);
+  el.textContent = '⏱️ ' + sec;
+  el.className = 'timer' + (sec <= URGENT_THRESHOLD ? ' urgent' : sec <= 10 ? ' warning' : '');
+}
+function handleTimerExpired() {
+  commitQuestion(state.currentQ);
+  if (state.currentQ < questions.length - 1) { state.currentQ++; render(); }
+  else { handleSubmit(); }
+}
+function commitQuestion(i) {
+  if (state.committed[i]) return;
+  state.committed[i] = true;
+  const ans = state.answers[i], correct = questions[i].correct;
+  if (ans === correct) { state.streak++; playCorrectChime(); }
+  else { state.streak = 0; if (ans !== undefined) playWrongStab(); }
+  state.urgentMode = false; setBPM(false);
+}
+
+// ════════════════════════════════════════════════════
+//  ID GEN + BLOCK BUILDERS + QUESTIONS
+// ════════════════════════════════════════════════════
+function generateQuizId() { const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let id = ''; for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)]; return id; }
+function isValidIdFormat(id) { return /^[A-Z0-9]{6}$/.test(id); }
+
+const op  = (c) => `<span class="blk blk-op">${c}</span>`;
+const vr  = (c) => `<span class="blk blk-var">${c}</span>`;
+const sn  = (c) => `<span class="blk blk-sense">${c}</span>`;
+const bo  = (c) => `<span class="blk-bool">${c}</span>`;
+const inp = (c) => `<span class="blk-input">${c}</span>`;
+const hl  = (c) => `<span class="hl">${c}</span>`;
+const q8_4 = op(`組合 ${vr('年齡')} 和 ${inp('歲')}`);
+const q8_3 = op(`組合 ${inp('，今年')} 和 ${q8_4}`);
+const q8_2 = op(`組合 ${vr('名字')} 和 ${q8_3}`);
+const q8_1 = op(`組合 ${inp('我叫')} 和 ${q8_2}`);
+
+const questions = [
+  { topic: '大於、小於、等於', title: '發燒警報器', icon: '🌡️',
+    scenario: `小華要做一個體溫警報器：當體溫${hl('「超過 37.5 度」')}就讓角色說「發燒了！」。下列哪個積木組合是正確的？`,
+    options: [
+      { letter: 'A', html: bo(`體溫 &lt; ${inp('37.5')}`) },
+      { letter: 'B', html: bo(`體溫 &gt; ${inp('37.5')}`) },
+      { letter: 'C', html: bo(`體溫 = ${inp('37.5')}`) },
+      { letter: 'D', html: bo(`${inp('37.5')} &gt; 體溫`) },
+    ], correct: 'B', explanation: '「超過」就是「大於 (>)」，注意數字的方向不能反' },
+  { topic: '或、且', title: '海盜船檢查員', icon: '🎢',
+    scenario: `海盜船規定：「身高${hl('大於')}120 公分${hl('而且')}年齡${hl('大於')}8 歲」才能搭乘。下列哪個積木組合正確？`,
+    options: [
+      { letter: 'A', html: bo('(身高 &gt; 120) 或 (年齡 &gt; 8)') },
+      { letter: 'B', html: bo('(身高 &lt; 120) 且 (年齡 &lt; 8)') },
+      { letter: 'C', html: bo('(身高 &gt; 120) 且 (年齡 &gt; 8)') },
+      { letter: 'D', html: bo('(身高 = 120) 或 (年齡 = 8)') },
+    ], correct: 'C', explanation: '「而且」=「且 (and)」，兩個條件要同時成立才會 true' },
+  { topic: '加減乘除', title: '手搖飲店結帳機', icon: '🧋',
+    scenario: `奶茶一杯${hl('65 元')}、加珍珠${hl('+10 元')}、買 3 杯打${hl('9 折')}。哪個積木算「3 杯加珍珠的總金額」是對的？`,
+    options: [
+      { letter: 'A', html: op('65 + 10 × 3 × 0.9') },
+      { letter: 'B', html: op('( 65 + 10 ) × 3 × 0.9') },
+      { letter: 'C', html: op('65 × 3 + 10 × 0.9') },
+      { letter: 'D', html: op('65 + ( 10 × 3 ) × 0.9') },
+    ], correct: 'B', explanation: '單價(65) + 加料(10) 要先算，所以括號要包住 → (65+10) × 3 × 0.9',
+    hint: 'Scratch 每個運算積木背後都有「括號」，要照「先算內層」的順序。' },
+  { topic: '隨機數', title: '擲骰子遊戲', icon: '🎲',
+    scenario: `要做擲骰子遊戲，每次顯示${hl('1 到 6 的整數')}。下列哪個設定會「產生小數」（不符合需求）？`,
+    options: [
+      { letter: 'A', html: op(`取 ${inp('1')} 到 ${inp('6')} 之間隨機數`) },
+      { letter: 'B', html: op(`取 ${inp('1')} 到 ${inp('6.0')} 之間隨機數`) },
+      { letter: 'C', html: op(`取 ${inp('1')} 到 ${inp('100')} 之間隨機數`) },
+      { letter: 'D', html: op(`取 ${inp('0')} 到 ${inp('9')} 之間隨機數`) },
+    ], correct: 'B', explanation: '6.0 帶有小數點，會讓整個結果變成兩位小數的隨機數',
+    hint: '兩個數字當中只要有一個有小數點，結果就會帶兩位小數。' },
+  { topic: '餘數', title: '班級分組器', icon: '👥',
+    scenario: `老師要把 30 個學生用座號分成${hl('4 組')}（座號 1→第1組、5→第1組…循環分配）。哪個積木最適合？`,
+    options: [
+      { letter: 'A', html: op('座號 ÷ 4') },
+      { letter: 'B', html: op('座號 × 4') },
+      { letter: 'C', html: op(`座號 除以 ${inp('4')} 的餘數`) },
+      { letter: 'D', html: op('座號 + 4') },
+    ], correct: 'C', explanation: '循環分組一定用「餘數」：座號 % 4 會得到 0,1,2,3 四種結果' },
+  { topic: '四捨五入', title: '考試平均分數', icon: '📝',
+    scenario: `小美三科平均分數是${hl('83.6666…')}，她想顯示「整數的平均分數」。哪個積木正確？`,
+    options: [
+      { letter: 'A', html: op('絕對值 ( 83.66 )') },
+      { letter: 'B', html: op('四捨五入 83.66') },
+      { letter: 'C', html: op('平方根 ( 83.66 )') },
+      { letter: 'D', html: op('83.66 除以 1 的餘數') },
+    ], correct: 'B', explanation: '小數變整數最直接的方式就是「四捨五入」' },
+  { topic: '數學運算', title: '兩點距離計算', icon: '📏',
+    scenario: `角色 A 在 X = 80，角色 B 在 X = -50，要算它們在 X 軸上的距離（${hl('不能是負數')}）。最適合用哪個積木？`,
+    options: [
+      { letter: 'A', html: op('平方根 ( 80 - (-50) )') },
+      { letter: 'B', html: op('四捨五入 80 - (-50)') },
+      { letter: 'C', html: op('絕對值 ( 80 - (-50) )') },
+      { letter: 'D', html: op('sin ( 80 - (-50) )') },
+    ], correct: 'C', explanation: '「不能是負數」就是絕對值的特性 — 正負都會變成正數' },
+  { topic: '字串組合', title: '自我介紹產生器', icon: '🪪',
+    scenario: `小安想讓角色說：「${hl('我叫小安，今年 12 歲')}」，其中「小安」「12」是變數。哪個積木組合對？`,
+    options: [
+      { letter: 'A', html: op(`組合 ${inp('我叫')} 和 ${inp('名字')}`) },
+      { letter: 'B', html: q8_1 },
+      { letter: 'C', html: op(`${vr('名字')} + ${vr('年齡')}`) },
+      { letter: 'D', html: op(`組合 ${vr('名字')} 和 ${vr('年齡')}`) },
+    ], correct: 'B', explanation: '要組合 4 段文字（我叫 / 名字 /「，今年」/ 年齡 / 歲），要把字串組合積木巢狀套 4 次',
+    hint: '要組合多段文字，要把字串組合積木「巢狀」一層一層套起來。' },
+  { topic: '字串資訊', title: '密碼長度檢查器', icon: '🔐',
+    scenario: `使用者輸入「${hl('abc123')}」，要判斷密碼有幾個字。哪個積木會回傳「${hl('6')}」？`,
+    options: [
+      { letter: 'A', html: op(`取 ${inp('1')} 字 從 ${inp('abc123')}`) },
+      { letter: 'B', html: op(`${inp('abc123')} 的長度`) },
+      { letter: 'C', html: bo(`${inp('abc123')} 包含 ${inp('a')} ?`) },
+      { letter: 'D', html: op(`${inp('abc123')} ÷ 6`) },
+    ], correct: 'B', explanation: '字數 = 字串長度積木。A 只取出第 1 個字 (a)，C 是判斷有沒有 a，都不對' },
+  { topic: '字串包含', title: 'VIP 識別系統', icon: '🚪',
+    scenario: `當使用者輸入的姓名${hl('包含「王」')}這個字時，要說「王董您好」。哪個積木組合正確？`,
+    options: [
+      { letter: 'A', html: bo(`${sn('回答')} = ${inp('王')}`) },
+      { letter: 'B', html: bo(`${sn('回答')} &gt; ${inp('王')}`) },
+      { letter: 'C', html: bo(`${sn('回答')} 包含 ${inp('王')} ?`) },
+      { letter: 'D', html: bo(`${op('回答 的長度')} = ${inp('1')}`) },
+    ], correct: 'C', explanation: '「等於」要完全相同才成立（如「王」），「包含」只要該字出現就成立（如「王小明」也通過）',
+    hint: '「等於」要完全相同才成立，「包含」只要該字出現過就成立。' },
+];
+
+// ════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════
+const state = {
+  screen: 'home',
+  myQuizIds: [],          // local storage of teacher's created IDs
+  myQuizMeta: {},         // {id: {createdAt, recordCount}} cached lookup
+  quizId: null,           // current quiz
+  dashboardRecords: [],   // real-time records from Firestore
+  unsubscribe: null,      // active Firestore listener
+  name: '', currentQ: 0, answers: {},
+  startTime: null, currentResult: null,
+  errorMsg: '', loading: false,
+  committed: {}, streak: 0,
+  timeRemaining: 30, questionStartTime: null,
+  activeTimerForQ: -1, urgentMode: false,
+};
+
+// ════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showToast(msg) { const c = document.getElementById('toast-container'); c.innerHTML = `<div class="toast">${escapeHtml(msg)}</div>`; setTimeout(() => { c.innerHTML = ''; }, 2000); }
+async function copyText(text) { try { await navigator.clipboard.writeText(text); showToast(`已複製：${text}`); } catch (e) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast(`已複製：${text}`); } }
+function byId(id) { return document.getElementById(id); }
+
+function showConfetti() {
+  const wrap = document.createElement('div');
+  wrap.className = 'confetti';
+  const colors = ['#F97316','#FFE066','#22C55E','#5CB1D6','#FF8C1A','#EC4899'];
+  for (let i = 0; i < 120; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDelay = (Math.random() * 0.8) + 's';
+    p.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+    p.style.transform = `rotate(${Math.random() * 360}deg)`;
+    wrap.appendChild(p);
+  }
+  document.body.appendChild(wrap);
+  setTimeout(() => wrap.remove(), 6000);
+}
+
+function unsubscribeListener() {
+  if (state.unsubscribe) { try { state.unsubscribe(); } catch {} state.unsubscribe = null; }
+}
+
+// ════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════
+function render() {
+  if (state.screen === 'quiz') ensureQuestionTimer();
+  else clearQuestionTimer();
+
+  const root = document.getElementById('app');
+  if (state.screen === 'home') root.innerHTML = renderHome();
+  else if (state.screen === 'teacher') root.innerHTML = renderTeacher();
+  else if (state.screen === 'dashboard') root.innerHTML = renderDashboard();
+  else if (state.screen === 'student') root.innerHTML = renderStudent();
+  else if (state.screen === 'quiz') root.innerHTML = renderQuiz();
+  else if (state.screen === 'results') root.innerHTML = renderResults();
+  attachHandlers();
+  refreshMuteBtn();
+}
+
+function renderSetupBanner() {
+  if (window.fbAPI?.isConfigured) return '';
+  return `
+    <div class="setup-banner">
+      <div class="setup-banner-title">⚠️ 尚未設定 Firebase</div>
+      <div class="setup-banner-text">
+        目前 app 在「離線模式」執行，<strong>無法跨裝置同步</strong>。<br>
+        請開啟 HTML 檔，找到 <code>firebaseConfig</code> 區塊，貼上你的 Firebase 設定。詳細教學見對話訊息。
+      </div>
+    </div>
+  `;
+}
+
+function renderHome() {
+  return `
+    ${renderSetupBanner()}
+    <div class="center-screen">
+      <div class="card card-shadow start-card">
+        <div class="cat-emoji">🐱</div>
+        <h1 class="title">Scratch 運算積木</h1>
+        <div class="subtitle-row"><span class="subtitle-tag">10 題具象化挑戰</span></div>
+        <p class="subtitle-text">把運算邏輯變成你能拼起來的拼圖</p>
+
+        <div class="role-buttons">
+          <button id="roleTeacherBtn" class="role-card teacher">
+            <div class="role-icon">👨‍🏫</div>
+            <div class="role-info">
+              <div class="role-title">我是老師</div>
+              <div class="role-desc">建立測驗 · 取得測驗 ID · 看學生成績</div>
+            </div>
+          </button>
+          <button id="roleStudentBtn" class="role-card student">
+            <div class="role-icon">👨‍🎓</div>
+            <div class="role-info">
+              <div class="role-title">我是學生</div>
+              <div class="role-desc">輸入老師的測驗 ID 進入答題</div>
+            </div>
+          </button>
+        </div>
+
+        <div class="legend">
+          <p class="legend-title">積木顏色對照</p>
+          <div class="legend-blocks">
+            ${op('運算')} ${vr('變數')} ${sn('偵測')} ${inp('輸入欄')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTeacher() {
+  return `
+    ${renderSetupBanner()}
+    <div class="center-screen">
+      <div class="card card-shadow start-card">
+        <button id="backHomeBtn" class="btn btn-ghost" style="margin-bottom: 8px;">← 返回</button>
+        <div class="cat-emoji" style="font-size: 48px;">👨‍🏫</div>
+        <h1 class="title">老師控制台</h1>
+        <p class="subtitle-text" style="margin-bottom: 20px;">建立測驗或載入既有測驗</p>
+
+        <button id="createQuizBtn" class="btn btn-primary" style="width:100%; padding: 14px; font-size: 18px;" ${state.loading ? 'disabled' : ''}>
+          ${state.loading ? '建立中…' : '➕ 建立新測驗'}
+        </button>
+        <p style="font-size: 12px; color: #9CA3AF; text-align: center; margin-top: 6px;">系統會產生一組 6 碼 ID 上傳到雲端</p>
+
+        <div class="or-divider">— 或 —</div>
+
+        <label class="form-label">輸入既有測驗 ID 載入：</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="loadQuizIdInput" class="form-input id-input" placeholder="ABC123" maxlength="6" style="flex: 1;">
+          <button id="loadQuizBtn" class="btn btn-secondary" ${state.loading ? 'disabled' : ''}>${state.loading ? '...' : '載入'}</button>
+        </div>
+        ${state.errorMsg ? `<div class="error-msg">${escapeHtml(state.errorMsg)}</div>` : ''}
+
+        ${state.myQuizIds.length > 0 ? `
+          <div class="legend">
+            <p class="legend-title">📋 我建立過的測驗（這台裝置）</p>
+            <div class="my-quiz-list">
+              ${state.myQuizIds.map(id => `
+                <button class="my-quiz-item" data-quiz-id="${id}">
+                  <span class="quiz-id-badge">${id}</span>
+                  <span style="flex: 1; font-size: 13px; color: #6B7280;">點擊查看儀表板</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderDashboard() {
+  const records = state.dashboardRecords;
+  const total = records.length;
+  const avgScore = total ? (records.reduce((s, r) => s + r.score, 0) / total).toFixed(1) : '-';
+  const topScore = total ? Math.max(...records.map(r => r.score)) : '-';
+
+  const tableRows = records.map((r, idx) => {
+    const pct = Math.round(r.score / 10 * 100);
+    const pctColor = pct >= 90 ? '#16A34A' : pct >= 70 ? '#F97316' : pct >= 50 ? '#EAB308' : '#EF4444';
+    return `
+      <tr>
+        <td style="color:#9CA3AF;">${idx + 1}</td>
+        <td style="font-size:13px; white-space:nowrap;">${new Date(r.date).toLocaleString('zh-TW')}</td>
+        <td style="font-weight:700;">${escapeHtml(r.name)}</td>
+        <td class="center" style="font-weight:700;">${r.score}/10</td>
+        <td class="center"><span class="pct-pill" style="background:${pctColor};">${pct}%</span></td>
+        <td class="center" style="color:#6B7280; font-size:13px;">${r.duration}s</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="dashboard-container">
+      <div class="dashboard-header">
+        <button id="backTeacherBtn" class="btn btn-secondary" style="padding: 8px 16px;">← 返回</button>
+        <h1>📊 即時成績儀表板 <span class="live-badge"><span class="live-dot"></span>LIVE</span></h1>
+        <div style="width:80px;"></div>
+      </div>
+
+      <div class="card id-hero">
+        <p class="id-hero-label">📌 測驗 ID（請分享給學生）</p>
+        <div class="id-hero-row">
+          <span class="quiz-id-display">${state.quizId}</span>
+          <button id="copyIdBtn" class="btn btn-secondary" style="padding: 10px 16px;">📋 複製</button>
+          <button id="copyLinkBtn" class="btn btn-secondary" style="padding: 10px 16px;">🔗 複製連結</button>
+        </div>
+        <p class="id-hero-tip">學生在任何裝置打開網址 → 選「我是學生」→ 輸入這組 ID → 開始答題<br>
+        ⚡ 學生送出後成績會「自動」跳出，不用按重新整理</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-label">已作答人數</div></div>
+        <div class="stat-box"><div class="stat-num">${avgScore}</div><div class="stat-label">平均分數</div></div>
+        <div class="stat-box"><div class="stat-num">${topScore}</div><div class="stat-label">最高分</div></div>
+      </div>
+
+      ${total === 0 ? `
+        <div class="card empty">
+          <div class="empty-emoji">⏳</div>
+          <p style="color:#374151; font-weight: 700; font-size: 16px;">等待學生作答…</p>
+          <p style="font-size: 13px; color: #9CA3AF; margin-top: 8px;">把測驗 ID <strong style="font-family: monospace;">${state.quizId}</strong> 分享給學生</p>
+          <p style="font-size: 12px; color: #16A34A; margin-top: 8px; font-weight: 700;">✓ 即時連線中：學生提交成績後會自動顯示</p>
+        </div>
+      ` : `
+        <div class="card card-shadow" style="padding: 0; overflow: hidden;">
+          <div class="records-table-wrap">
+            <table class="records">
+              <thead><tr><th>#</th><th>提交時間</th><th>姓名</th><th class="center">得分</th><th class="center">百分比</th><th class="center">用時</th></tr></thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+          </div>
+        </div>
+        <div class="records-actions">
+          <button id="downloadAllBtn" class="btn btn-success grow">📊 下載 Excel (${total} 筆)</button>
+          <button id="deleteQuizBtn" class="btn btn-danger">🗑️ 刪除整份測驗</button>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function renderStudent() {
+  return `
+    ${renderSetupBanner()}
+    <div class="center-screen">
+      <div class="card card-shadow start-card">
+        <button id="backHomeBtn" class="btn btn-ghost" style="margin-bottom: 8px;">← 返回</button>
+        <div class="cat-emoji" style="font-size: 48px;">👨‍🎓</div>
+        <h1 class="title">學生入口</h1>
+        <p class="subtitle-text" style="margin-bottom: 16px;">請輸入老師提供的測驗資訊</p>
+
+        <div style="background:#FEF3C7; border:2px solid #FBBF24; border-radius:10px; padding:10px 14px; margin-bottom:18px; font-size:13px; color:#78350F;">
+          <strong>⚡ 遊戲規則：</strong><br>
+          ⏱️ 每題限時 <strong>30 秒</strong>（最後 5 秒音樂變急）<br>
+          🔒 點下一題就鎖定答案，不能改了<br>
+          🔥 連續答對 BPM 加速、答錯音樂變調
+        </div>
+
+        <label class="form-label">📌 測驗 ID（老師提供）</label>
+        <input type="text" id="studentQuizIdInput" class="form-input id-input" placeholder="ABC123" maxlength="6" style="margin-bottom: 14px;" value="${escapeHtml(state.quizId || '')}">
+
+        <label class="form-label">👤 你的名字</label>
+        <input type="text" id="studentNameInput" class="form-input" placeholder="例：王小明" maxlength="20" value="${escapeHtml(state.name || '')}">
+
+        ${state.errorMsg ? `<div class="error-msg">${escapeHtml(state.errorMsg)}</div>` : ''}
+
+        <button id="studentStartBtn" class="btn btn-primary" style="width:100%; margin-top: 16px; padding: 14px; font-size: 18px;" ${state.loading ? 'disabled' : ''}>
+          ${state.loading ? '驗證中…' : '🎵 開始挑戰 →'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuiz() {
+  const q = questions[state.currentQ];
+  const isLast = state.currentQ === questions.length - 1;
+  const allCommitted = questions.every((_, i) => state.committed[i]);
+  const currentAns = state.answers[state.currentQ];
+  const isLocked = state.committed[state.currentQ];
+
+  const dots = questions.map((_, i) => {
+    let cls = '';
+    if (state.committed[i]) cls = 'committed';
+    if (i === state.currentQ) cls = 'current';
+    return `<button class="dot ${cls}" data-jump="${i}"></button>`;
+  }).join('');
+
+  const optionsHtml = q.options.map(opt => `
+    <button class="option ${currentAns === opt.letter ? 'selected' : ''} ${isLocked ? 'locked' : ''}" data-letter="${opt.letter}" ${isLocked ? 'disabled' : ''}>
+      <span class="opt-letter">${opt.letter}</span>
+      <span class="opt-content">${opt.html}</span>
+    </button>
+  `).join('');
+
+  const prevDisabled = state.currentQ === 0;
+  const finalBtn = isLast
+    ? `<button id="submitBtn" class="btn btn-primary" data-all-committed="${allCommitted}">送出答案 ✨</button>`
+    : (isLocked
+        ? `<button id="nextBtn" class="btn btn-secondary">下一題 →</button>`
+        : `<button id="nextBtn" class="btn ${currentAns ? 'btn-primary' : 'btn-secondary'}">${currentAns ? '🔒 鎖定答案 →' : '下一題 →'}</button>`);
+
+  const timerHtml = isLocked ? '' : (() => {
+    const sec = Math.ceil(state.timeRemaining);
+    const cls = sec <= URGENT_THRESHOLD ? 'urgent' : sec <= 10 ? 'warning' : '';
+    return `<span id="timer" class="timer ${cls}">⏱️ ${sec}</span>`;
+  })();
+
+  const streakHtml = state.streak >= 2 ? `<span class="streak">🔥 ${state.streak} 連勝</span>` : '';
+
+  return `
+    <div class="quiz-container">
+      <div class="quiz-topbar">
+        <span>
+          <span style="color:#6B7280;">挑戰者：</span>
+          <span class="name">${escapeHtml(state.name)}</span>
+          <span style="color:#9CA3AF; margin-left: 8px;">·</span>
+          <span style="color:#6B7280; margin-left: 8px;">測驗</span>
+          <span class="quiz-id-badge" style="font-size:11px; padding: 1px 6px;">${state.quizId}</span>
+          ${streakHtml}
+        </span>
+        <span class="right">
+          ${timerHtml}
+          <span style="font-weight:900;">第 ${state.currentQ + 1} / ${questions.length} 題</span>
+          <button id="muteBtn" class="music-btn" title="開關音樂">🔊</button>
+        </span>
+      </div>
+
+      <div class="progress-dots">${dots}</div>
+
+      ${isLocked ? '<div class="lock-banner">🔒 此題已鎖定，無法修改答案</div>' : ''}
+
+      <div class="card card-shadow">
+        <div class="topic-row">
+          <span class="topic-tag">${q.topic}</span>
+          <span class="q-title">${q.title} ${q.icon}</span>
+        </div>
+        <p class="scenario">${q.scenario}</p>
+        <div class="options">${optionsHtml}</div>
+        ${q.hint ? `<div class="hint">💡 ${q.hint}</div>` : ''}
+      </div>
+
+      <div class="nav-buttons">
+        <button id="prevBtn" class="btn btn-secondary" ${prevDisabled ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>← 上一題</button>
+        ${finalBtn}
+      </div>
+    </div>
+  `;
+}
+
+function renderResults() {
+  const r = state.currentResult;
+  const pct = Math.round(r.score / 10 * 100);
+  const isPerfect = r.score === 10;
+  let emoji = '💪', message = '再接再厲！', medal = '🌱';
+  if (pct >= 90) { emoji = '🏆'; message = '完美無瑕！運算大師'; medal = '🥇'; }
+  else if (pct >= 70) { emoji = '🎉'; message = '表現優秀！'; medal = '🥈'; }
+  else if (pct >= 50) { emoji = '👍'; message = '不錯喔，繼續努力！'; medal = '🥉'; }
+
+  const reviewHtml = questions.map((q, i) => {
+    const ans = r.answers[i];
+    const isCorrect = ans === q.correct;
+    return `
+      <div class="review-item ${isCorrect ? 'correct' : 'wrong'}">
+        <div class="check-circle ${isCorrect ? 'ok' : 'no'}">${isCorrect ? '✓' : '✗'}</div>
+        <div class="review-body">
+          <div class="review-head">
+            <strong>第 ${i+1} 題</strong>
+            <span class="small-tag">${q.topic}</span>
+            <span style="font-size:14px;color:#374151;">${q.title} ${q.icon}</span>
+          </div>
+          <div class="your-ans">
+            <span style="color:#6B7280;">你的答案：</span>
+            <span class="${isCorrect ? 'ok-text' : 'no-text'}">${ans || '(未作答)'}</span>
+            ${!isCorrect ? `<span style="color:#6B7280; margin-left:8px;">正解：</span><span class="correct-text">${q.correct}</span>` : ''}
+          </div>
+          <p class="explanation">💡 ${q.explanation}</p>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="results-container">
+      <div class="card hero ${isPerfect ? 'perfect-glow' : ''}" style="${isPerfect ? '' : 'box-shadow: 8px 8px 0 #F97316;'}">
+        <div class="hero-emoji">${emoji}</div>
+        <p class="hero-msg"><span class="name-strong">${escapeHtml(r.name)}</span>，${message}</p>
+        <div class="score-display">
+          <span class="score-num">${r.score}</span>
+          <span class="score-total">/ 10</span>
+        </div>
+        <div class="medal">${medal} 答對率 ${pct}%</div>
+        <p class="meta-info">用時 ${r.duration} 秒 · 測驗 <span class="quiz-id-badge" style="font-size:11px;">${state.quizId}</span></p>
+        <p class="meta-info" style="margin-top: 4px;">✓ 成績已上傳到雲端，老師可即時看到</p>
+      </div>
+
+      <div class="card breakdown">
+        <h2>📋 作答詳情</h2>
+        ${reviewHtml}
+      </div>
+
+      <div class="results-actions">
+        <button id="restartBtn" class="btn btn-primary">🔄 再玩一次</button>
+        <button id="backHomeBtn" class="btn btn-secondary">🏠 返回首頁</button>
+      </div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════
+//  HANDLERS
+// ════════════════════════════════════════════════════
+function attachHandlers() {
+  byId('roleTeacherBtn')?.addEventListener('click', () => { state.screen = 'teacher'; state.errorMsg = ''; render(); });
+  byId('roleStudentBtn')?.addEventListener('click', () => { state.screen = 'student'; state.errorMsg = ''; render(); });
+
+  byId('createQuizBtn')?.addEventListener('click', handleCreateQuiz);
+  byId('loadQuizBtn')?.addEventListener('click', handleLoadQuiz);
+  byId('loadQuizIdInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') handleLoadQuiz(); });
+  document.querySelectorAll('.my-quiz-item').forEach(item => {
+    item.addEventListener('click', e => openDashboard(e.currentTarget.dataset.quizId));
+  });
+
+  byId('backTeacherBtn')?.addEventListener('click', () => {
+    unsubscribeListener();
+    state.screen = 'teacher'; render();
+  });
+  byId('copyIdBtn')?.addEventListener('click', () => copyText(state.quizId));
+  byId('copyLinkBtn')?.addEventListener('click', () => {
+    const url = window.location.origin + window.location.pathname + `?id=${state.quizId}`;
+    copyText(url);
+  });
+  byId('downloadAllBtn')?.addEventListener('click', () => {
+    exportToExcel(state.quizId, state.dashboardRecords, `測驗${state.quizId}_成績`);
+  });
+  byId('deleteQuizBtn')?.addEventListener('click', handleDeleteQuiz);
+
+  byId('studentStartBtn')?.addEventListener('click', handleStudentStart);
+  byId('studentNameInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') handleStudentStart(); });
+
+  document.querySelectorAll('.dot').forEach(dot => {
+    dot.addEventListener('click', e => { state.currentQ = parseInt(e.currentTarget.dataset.jump); render(); });
+  });
+  document.querySelectorAll('.option').forEach(opt => {
+    opt.addEventListener('click', e => {
+      if (state.committed[state.currentQ]) return;
+      state.answers = { ...state.answers, [state.currentQ]: e.currentTarget.dataset.letter };
+      render();
+    });
+  });
+  byId('prevBtn')?.addEventListener('click', () => { if (state.currentQ > 0) { state.currentQ--; render(); } });
+  byId('nextBtn')?.addEventListener('click', () => {
+    commitQuestion(state.currentQ);
+    if (state.currentQ < questions.length - 1) { state.currentQ++; render(); }
+  });
+  byId('submitBtn')?.addEventListener('click', () => {
+    commitQuestion(state.currentQ);
+    const stillUncommitted = questions.some((_, i) => !state.committed[i]);
+    if (stillUncommitted && !confirm('還有題目沒鎖定喔！確定要送出嗎？')) return;
+    handleSubmit();
+  });
+  byId('muteBtn')?.addEventListener('click', toggleMute);
+
+  byId('restartBtn')?.addEventListener('click', async () => {
+    state.committed = {}; state.streak = 0;
+    state.answers = {}; state.currentQ = 0;
+    state.startTime = Date.now();
+    state.activeTimerForQ = -1; state.urgentMode = false;
+    state.screen = 'quiz'; render();
+    await startMusic();
+  });
+  byId('backHomeBtn')?.addEventListener('click', () => {
+    stopMusic(); clearQuestionTimer(); unsubscribeListener();
+    state.screen = 'home'; state.quizId = null; state.name = '';
+    state.errorMsg = ''; state.answers = {}; state.currentQ = 0;
+    state.currentResult = null; state.committed = {}; state.streak = 0;
+    state.dashboardRecords = [];
+    render();
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  ACTIONS (Firebase-aware)
+// ════════════════════════════════════════════════════
+async function handleCreateQuiz() {
+  if (!window.fbAPI?.isConfigured) {
+    state.errorMsg = '請先設定 Firebase（見 HTML 開頭的說明）';
+    render(); return;
+  }
+  state.loading = true; state.errorMsg = ''; render();
+  try {
+    let id;
+    let attempts = 0;
+    do {
+      id = generateQuizId();
+      const existing = await window.fbAPI.getQuiz(id);
+      if (!existing) break;
+      attempts++;
+    } while (attempts < 5);
+
+    await window.fbAPI.createQuiz(id);
+    addMyQuizId(id);
+    state.myQuizIds = getMyQuizIds();
+    state.quizId = id;
+    state.loading = false;
+    openDashboard(id);
+    setTimeout(() => showToast(`測驗 ${id} 已建立並上傳雲端`), 100);
+  } catch (e) {
+    state.loading = false;
+    state.errorMsg = '建立失敗：' + (e?.message || '未知錯誤');
+    render();
+  }
+}
+
+async function handleLoadQuiz() {
+  const id = byId('loadQuizIdInput').value.trim().toUpperCase();
+  if (!isValidIdFormat(id)) { state.errorMsg = '測驗 ID 格式錯誤（必須是 6 個字母或數字）'; render(); return; }
+  if (!window.fbAPI?.isConfigured) {
+    state.errorMsg = '請先設定 Firebase';
+    render(); return;
+  }
+  state.loading = true; state.errorMsg = ''; render();
+  try {
+    const quiz = await window.fbAPI.getQuiz(id);
+    if (!quiz) {
+      state.loading = false;
+      state.errorMsg = `找不到測驗 ID「${id}」，請確認後重新輸入`;
+      render(); return;
+    }
+    addMyQuizId(id);
+    state.myQuizIds = getMyQuizIds();
+    state.loading = false;
+    openDashboard(id);
+  } catch (e) {
+    state.loading = false;
+    state.errorMsg = '載入失敗：' + (e?.message || '未知錯誤');
+    render();
+  }
+}
+
+function openDashboard(id) {
+  unsubscribeListener();
+  state.quizId = id;
+  state.errorMsg = '';
+  state.dashboardRecords = [];
+  state.screen = 'dashboard';
+  render();
+  // Subscribe real-time updates
+  if (window.fbAPI?.isConfigured) {
+    state.unsubscribe = window.fbAPI.listenToRecords(id, (records) => {
+      state.dashboardRecords = records;
+      // Only re-render if still on dashboard
+      if (state.screen === 'dashboard') render();
+    });
+  }
+}
+
+async function handleDeleteQuiz() {
+  if (!confirm(`確定要從雲端刪除測驗 ${state.quizId} 與所有學生成績嗎？此動作無法復原。`)) return;
+  try {
+    unsubscribeListener();
+    await window.fbAPI.deleteQuiz(state.quizId);
+    removeMyQuizId(state.quizId);
+    state.myQuizIds = getMyQuizIds();
+    state.quizId = null;
+    state.dashboardRecords = [];
+    state.screen = 'teacher'; render();
+    showToast('測驗已刪除');
+  } catch (e) {
+    showToast('刪除失敗：' + (e?.message || '未知錯誤'));
+  }
+}
+
+async function handleStudentStart() {
+  const id = byId('studentQuizIdInput').value.trim().toUpperCase();
+  const name = byId('studentNameInput').value.trim();
+  if (!id) { state.errorMsg = '請輸入測驗 ID'; state.name = name; render(); return; }
+  if (!isValidIdFormat(id)) { state.errorMsg = '測驗 ID 格式錯誤'; state.quizId = id; state.name = name; render(); return; }
+  if (!name) { state.errorMsg = '請輸入你的名字'; state.quizId = id; render(); return; }
+  if (!window.fbAPI?.isConfigured) {
+    state.errorMsg = '此 app 尚未設定 Firebase，無法連線'; state.quizId = id; state.name = name; render(); return;
+  }
+
+  state.loading = true; state.errorMsg = ''; render();
+  try {
+    const quiz = await window.fbAPI.getQuiz(id);
+    if (!quiz) {
+      state.loading = false;
+      state.errorMsg = `找不到測驗 ID「${id}」，請向老師確認`;
+      state.quizId = id; state.name = name; render(); return;
+    }
+    state.loading = false;
+    state.quizId = id; state.name = name;
+    state.answers = {}; state.currentQ = 0;
+    state.committed = {}; state.streak = 0;
+    state.activeTimerForQ = -1; state.urgentMode = false;
+    state.startTime = Date.now();
+    state.screen = 'quiz';
+    render();
+    await startMusic();
+  } catch (e) {
+    state.loading = false;
+    state.errorMsg = '連線失敗：' + (e?.message || '未知錯誤');
+    render();
+  }
+}
+
+async function handleSubmit() {
+  stopMusic(); clearQuestionTimer();
+
+  const score = questions.reduce((sum, q, i) => sum + (state.answers[i] === q.correct ? 1 : 0), 0);
+  const duration = Math.round((Date.now() - state.startTime) / 1000);
+  const record = {
+    id: Date.now(), name: state.name.trim(),
+    date: new Date().toISOString(),
+    answers: { ...state.answers }, score, duration,
+  };
+  state.currentResult = record;
+
+  // Upload to Firebase
+  try {
+    await window.fbAPI.submitRecord(state.quizId, record);
+  } catch (e) {
+    showToast('成績上傳失敗，但你的作答仍會顯示');
+    console.error(e);
+  }
+
+  state.screen = 'results'; render();
+
+  if (score === 10) {
+    setTimeout(() => { showConfetti(); playVictoryFanfare(); }, 350);
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  EXCEL
+// ════════════════════════════════════════════════════
+function exportToExcel(quizId, records, filename) {
+  const summary = records.map((r, idx) => ({
+    '#': idx + 1, '測驗ID': quizId,
+    '提交時間': new Date(r.date).toLocaleString('zh-TW'),
+    '姓名': r.name, '得分': `${r.score}/10`,
+    '百分比': `${Math.round(r.score / 10 * 100)}%`, '用時(秒)': r.duration,
+  }));
+  const detail = records.map((r, idx) => {
+    const row = { '#': idx + 1, '測驗ID': quizId, '提交時間': new Date(r.date).toLocaleString('zh-TW'), '姓名': r.name, '得分': r.score };
+    questions.forEach((q, i) => {
+      const ans = r.answers[i] || '-';
+      row[`Q${i+1}_作答`] = ans;
+      row[`Q${i+1}_正解`] = q.correct;
+      row[`Q${i+1}_對錯`] = ans === q.correct ? '✓' : '✗';
+    });
+    return row;
+  });
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.json_to_sheet(summary);
+  ws1['!cols'] = [{wch:5},{wch:10},{wch:20},{wch:15},{wch:8},{wch:8},{wch:10}];
+  const ws2 = XLSX.utils.json_to_sheet(detail);
+  XLSX.utils.book_append_sheet(wb, ws1, '成績總覽');
+  XLSX.utils.book_append_sheet(wb, ws2, '詳細作答');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+// ════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════
+function boot() {
+  state.myQuizIds = getMyQuizIds();
+  try { music.muted = localStorage.getItem('music_muted') === '1'; } catch {}
+
+  // 處理 URL 中的 ?id=ABC123（讓老師發連結直接帶學生進入）
+  const params = new URLSearchParams(window.location.search);
+  const urlId = params.get('id');
+  if (urlId && isValidIdFormat(urlId.toUpperCase())) {
+    state.quizId = urlId.toUpperCase();
+    state.screen = 'student';
+  }
+
+  renderConnStatus();
+  render();
+}
+
+// 等 Firebase 初始化完成才開始
+if (window.fbAPI) {
+  boot();
+} else {
+  window.addEventListener('firebase-ready', boot);
+  // Fallback in case Firebase script fails
+  setTimeout(() => { if (state.screen === 'home' && !document.getElementById('app').innerHTML) boot(); }, 2000);
+}
+</script>
+
+</body>
+</html>
